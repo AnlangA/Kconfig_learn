@@ -1,0 +1,218 @@
+menu "Kconfig learn"
+
+config FEATURE_A
+    bool "Enable Feature A"
+    default y
+    help
+        This option enables Feature A in the project.
+        
+config FEATURE_B
+    tristate "Enable Feature B"
+    depends on FEATURE_A
+    help
+        This option enables Feature B. It depends on Feature A.
+
+config MAX_CONNECTIONS
+    int "Maximum Connections"
+    range 1 100
+    default 10
+    help
+        Specify the maximum number of connections (1 to 100).
+
+config USER_NAME
+        string "Default User Name"
+        default "admin"
+        help
+            Specify the default user name for the system.
+endmenu
+
+menu "Complex Configuration Options"
+
+config NETWORK_SUPPORT
+    tristate "Enable Network Support"
+    default y
+    help
+        Enable network-related functionality in the system. Can be built as a module.
+        
+config WIFI_SUPPORT
+    bool "Enable WiFi Support"
+    depends on NETWORK_SUPPORT
+    default y if NETWORK_SUPPORT=y
+    default n if NETWORK_SUPPORT=n
+    help
+        Enable WiFi functionality. Requires Network Support to be enabled.
+
+config BLUETOOTH_SUPPORT
+    bool "Enable Bluetooth Support"
+    select NETWORK_SUPPORT
+    help
+        Enable Bluetooth functionality. This will automatically enable Network Support.
+
+        menu "Storage Options"
+
+        config STORAGE_TYPE
+            string "Default Storage Type"
+            default "HDD"
+            help
+                Specify the default storage type (e.g., HDD, SSD, NFS).
+        
+        config SSD_SUPPORT
+            bool "Enable SSD Support"
+            depends on STORAGE_TYPE = "SSD"
+            help
+                Enable optimizations and features for SSD storage.
+        
+        endmenu
+
+config MAX_BUFFER_SIZE
+    int "Maximum Buffer Size (in KB)"
+    range 128 4096
+    default 1024 if WIFI_SUPPORT
+    default 512 if BLUETOOTH_SUPPORT
+    help
+        Specify the maximum buffer size. Defaults depend on enabled features.
+
+config ADVANCED_FEATURE
+    bool "Enable Advanced Feature"
+    depends on WIFI_SUPPORT || BLUETOOTH_SUPPORT
+    help
+        Enable advanced features if either WiFi or Bluetooth support is enabled.
+
+endmenu
+
+menu "Super Complex Configuration Options"
+
+config BASE_SYSTEM
+    tristate "Enable Base System"
+    default y
+    help
+        This option enables the base system functionalities. All other features depend on this.
+
+config ADVANCED_MODE
+    bool "Enable Advanced Mode"
+    depends on BASE_SYSTEM=y || BASE_SYSTEM=m
+    help
+        Enables advanced mode. Requires the base system to be enabled either statically or as a module.
+
+config FILESYSTEM_SUPPORT
+    tristate "Filesystem Support"
+    depends on BASE_SYSTEM
+    default m if BASE_SYSTEM=m
+    default y if BASE_SYSTEM=y
+    help
+        Provides filesystem support for the system. Automatically adapts to the base system s build type.
+
+menuconfig NETWORK_STACK
+    bool "Enable Network Stack"
+    default n
+    help
+        Enables the network stack for the system. Provides options for network protocols and drivers.
+
+if NETWORK_STACK
+    config IPV4_SUPPORT
+        bool "Enable IPv4 Support"
+        default y
+        help
+            Enables support for IPv4 protocol.
+
+    config IPV6_SUPPORT
+        bool "Enable IPv6 Support"
+        depends on IPV4_SUPPORT
+        help
+            Enables support for IPv6 protocol. Requires IPv4 support.
+
+    choice
+        prompt "Default Network Protocol"
+        default USE_TCP if IPV4_SUPPORT
+        default USE_UDP if !IPV4_SUPPORT
+
+        config USE_TCP
+            bool "TCP (Transmission Control Protocol)"
+            help
+                Use TCP as the default network protocol.
+
+        config USE_UDP
+            bool "UDP (User Datagram Protocol)"
+            help
+                Use UDP as the default network protocol.
+    endchoice
+
+    config WIRELESS_SUPPORT
+        tristate "Enable Wireless Network Support"
+        depends on BASE_SYSTEM && NETWORK_STACK
+        default m
+        help
+            Provides wireless networking capabilities. This feature can be modular.
+endif
+
+config MAX_THREADS
+    int "Maximum Number of Threads"
+    range 1 512
+    default 128 if ADVANCED_MODE
+    default 64
+    help
+        Specifies the maximum number of threads allowed in the system.
+
+menu "Storage Configuration"
+    config STORAGE_SUPPORT
+        bool "Enable Storage Subsystem"
+        default y
+
+    if STORAGE_SUPPORT
+        config STORAGE_BACKEND
+            string "Default Storage Backend"
+            default "EXT4" if BASE_SYSTEM=y
+            default "FAT32" if BASE_SYSTEM=m
+            default "NONE"
+            help
+                Specify the default storage backend for the system.
+
+        choice
+            prompt "Storage Optimization"
+            default OPT_BALANCED
+
+            config OPT_BALANCED
+                bool "Balanced Optimization"
+                help
+                    Use balanced optimizations for storage.
+
+            config OPT_SPEED
+                bool "Speed Optimization"
+                help
+                    Optimize storage for speed.
+
+            config OPT_SPACE
+                bool "Space Optimization"
+                help
+                    Optimize storage for space.
+        endchoice
+    endif
+endmenu
+
+config SECURITY_SUPPORT
+    bool "Enable Security Features"
+    select FIREWALL_SUPPORT if NETWORK_STACK
+    help
+        Enables additional security features for the system.
+
+config FIREWALL_SUPPORT
+    bool "Enable Firewall"
+    depends on NETWORK_STACK
+    help
+        Enables firewall functionalities. Automatically selected if security features are enabled.
+
+config DEBUG_FEATURES
+    bool "Enable Debugging Features"
+    depends on ADVANCED_MODE && (!NETWORK_STACK || WIRELESS_SUPPORT=m)
+    help
+        Enables debugging features based on advanced mode and network stack state.
+
+config LOG_LEVEL
+    int "Log Level (0-5)"
+    range 0 5
+    default 3
+    depends on DEBUG_FEATURES
+    help
+        Sets the logging level. Only available if debugging features are enabled.
+
+endmenu
